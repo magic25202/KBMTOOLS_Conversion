@@ -3268,103 +3268,105 @@ document.getElementById('cat-modal').addEventListener('click', function(e) {
 });
 
 
-// ── 핀치줌 (catalog-modal-img / cat-modal-img) ──
+// pinch-zoom & pan (catalog-modal-img / cat-modal-img)
 (function () {
-  var pz = {
-    el: null, scale: 1, lastScale: 1,
-    startDist: 0, startX: 0, startY: 0,
-    tx: 0, ty: 0, ltx: 0, lty: 0
+  var pz = { el: null, scale: 1, lastScale: 1, tx: 0, ty: 0 };
+
+  window.pzReset = function (el) {
+    if (el) el.style.transform = '';
+    pz.el = null; pz.scale = 1; pz.lastScale = 1; pz.tx = 0; pz.ty = 0;
   };
 
-  function dist(t) {
-    return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
-  }
-  function midPt(t) {
-    return { x: (t[0].clientX + t[1].clientX) / 2,
-             y: (t[0].clientY + t[1].clientY) / 2 };
-  }
-  function apply() {
+  function applyPz() {
+    // scale(s) translate(tx/s, ty/s) with transform-origin:0 0
+    // => 이미지 좌표 (px,py) -> 화면(래퍼 기준) (s*px+tx, s*py+ty)
     pz.el.style.transform =
       'scale(' + pz.scale + ') translate(' +
       (pz.tx / pz.scale) + 'px,' + (pz.ty / pz.scale) + 'px)';
   }
 
-  window.pzReset = function (el) {
-    if (el) el.style.transform = '';
-    pz.scale = 1; pz.lastScale = 1;
-    pz.tx = 0;   pz.ty = 0;
-    pz.ltx = 0;  pz.lty = 0;
-    pz.el = null;
-  };
+  function d2(t) {
+    return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  }
+  function mid2(t) {
+    return { x: (t[0].clientX + t[1].clientX) / 2,
+             y: (t[0].clientY + t[1].clientY) / 2 };
+  }
 
-  function attach(imgId) {
-    var imgEl = document.getElementById(imgId);
-    if (!imgEl) return;
+  function attach(imgEl) {
     var wrapper = imgEl.parentNode;
-    var lastTap = 0;
-    var pinching = false;
-    var panning = false;
-    var panStartX = 0, panStartY = 0;
+    var gesture = null;
+    var lastTap  = 0;
 
     wrapper.addEventListener('touchstart', function (e) {
       if (e.touches.length === 2) {
-        pinching = true;
-        panning = false;
         e.preventDefault();
         pz.el = imgEl;
-        pz.startDist = dist(e.touches);
-        var m = midPt(e.touches);
-        pz.startX = m.x; pz.startY = m.y;
-        pz.ltx = pz.tx; pz.lty = pz.ty;
+        var rect = wrapper.getBoundingClientRect();
+        var m = mid2(e.touches);
+        gesture = {
+          type: 'pinch',
+          startDist:  d2(e.touches),
+          startMx: m.x,       startMy: m.y,
+          startTx: pz.tx,     startTy: pz.ty,
+          startScale: pz.lastScale,
+          wl: rect.left,      wt: rect.top
+        };
       } else if (e.touches.length === 1 && pz.lastScale > 1) {
-        panning = true;
+        e.preventDefault();
         pz.el = imgEl;
-        panStartX = e.touches[0].clientX;
-        panStartY = e.touches[0].clientY;
-        pz.ltx = pz.tx; pz.lty = pz.ty;
+        gesture = {
+          type: 'pan',
+          startX: e.touches[0].clientX,
+          startY: e.touches[0].clientY,
+          startTx: pz.tx, startTy: pz.ty
+        };
       }
     }, { passive: false });
 
     wrapper.addEventListener('touchmove', function (e) {
-      if (e.touches.length === 2 && pz.el === imgEl) {
-        e.preventDefault();
-        var d = dist(e.touches);
-        pz.scale = Math.max(1, Math.min(4, pz.lastScale * d / pz.startDist));
-        var m = midPt(e.touches);
-        pz.tx = pz.ltx + (m.x - pz.startX);
-        pz.ty = pz.lty + (m.y - pz.startY);
-        apply();
-      } else if (e.touches.length === 1 && panning && pz.el === imgEl) {
-        e.preventDefault();
-        pz.tx = pz.ltx + (e.touches[0].clientX - panStartX);
-        pz.ty = pz.lty + (e.touches[0].clientY - panStartY);
-        apply();
+      if (!gesture || pz.el !== imgEl) return;
+      e.preventDefault();
+
+      if (gesture.type === 'pinch' && e.touches.length === 2) {
+        var d = d2(e.touches);
+        var m = mid2(e.touches);
+        var s2 = Math.max(1, Math.min(4,
+                   gesture.startScale * d / gesture.startDist));
+        var r = s2 / gesture.startScale;
+        // 핀치 중심점 고정: tx = cx1 - r*(cx0 - startTx)
+        // cx0 = 초기 핀치 중점(래퍼 기준), cx1 = 현재 중점(래퍼 기준)
+        pz.tx = (m.x - gesture.wl) - r * (gesture.startMx - gesture.wl - gesture.startTx);
+        pz.ty = (m.y - gesture.wt) - r * (gesture.startMy - gesture.wt - gesture.startTy);
+        pz.scale = s2;
+        applyPz();
+
+      } else if (gesture.type === 'pan' && e.touches.length === 1) {
+        pz.tx = gesture.startTx + (e.touches[0].clientX - gesture.startX);
+        pz.ty = gesture.startTy + (e.touches[0].clientY - gesture.startY);
+        applyPz();
       }
     }, { passive: false });
 
     wrapper.addEventListener('touchend', function (e) {
-      if (pz.el === imgEl && e.touches.length < 2) {
+      if (pz.el === imgEl) {
         pz.lastScale = pz.scale;
         if (pz.scale < 1.05) window.pzReset(imgEl);
       }
       if (e.touches.length === 0) {
-        pinching = false;
-        panning = false;
-      }
-      if (!pinching) {
+        gesture = null;
         var now = Date.now();
-        if (now - lastTap < 300) {
-          e.preventDefault();
-          window.pzReset(imgEl);
-        }
+        if (now - lastTap < 300) { e.preventDefault(); window.pzReset(imgEl); }
         lastTap = now;
       }
     });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    attach('catalog-modal-img');
-    attach('cat-modal-img');
+    ['catalog-modal-img', 'cat-modal-img'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) attach(el);
+    });
   });
 })();
 
