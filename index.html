@@ -3302,9 +3302,11 @@ document.getElementById('cat-modal').addEventListener('click', function(e) {
     if (!imgEl) return;
     var wrapper = imgEl.parentNode;
     var lastTap = 0;
+    var pinching = false;
 
     wrapper.addEventListener('touchstart', function (e) {
       if (e.touches.length === 2) {
+        pinching = true;
         e.preventDefault();
         pz.el = imgEl;
         pz.startDist = dist(e.touches);
@@ -3331,12 +3333,15 @@ document.getElementById('cat-modal').addEventListener('click', function(e) {
         pz.lastScale = pz.scale;
         if (pz.scale < 1.05) window.pzReset(imgEl);
       }
-      var now = Date.now();
-      if (now - lastTap < 300) {
-        e.preventDefault();
-        window.pzReset(imgEl);
+      if (e.touches.length === 0) pinching = false;
+      if (!pinching) {
+        var now = Date.now();
+        if (now - lastTap < 300) {
+          e.preventDefault();
+          window.pzReset(imgEl);
+        }
+        lastTap = now;
       }
-      lastTap = now;
     });
   }
 
