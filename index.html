@@ -899,7 +899,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
         style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);
         border-radius:6px;padding:6px 12px;color:#fff;font-size:13px;cursor:pointer;">▶</button>
     </div>
-    <img id="cat-modal-img" style="width:100%;border-radius:8px;display:block;" src="">
+    <div id="cat-img-wrapper" style="overflow:hidden;border-radius:8px;width:100%;touch-action:none;">
+      <img id="cat-modal-img" style="width:100%;display:block;transform-origin:0 0;will-change:transform;" src="">
+    </div>
   </div>
 </div>
 
@@ -927,8 +929,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       background:rgba(255,255,255,.08);border-radius:6px;padding:4px 12px;"></div>
 
     <!-- 이미지 -->
-    <img id="catalog-modal-img" src="" alt="카탈로그"
-      style="width:100%;max-width:860px;border-radius:8px;display:block;">
+    <div id="catalog-img-wrapper" style="overflow:hidden;border-radius:8px;width:100%;max-width:860px;touch-action:none;">
+      <img id="catalog-modal-img" src="" alt="카탈로그"
+        style="width:100%;display:block;transform-origin:0 0;will-change:transform;">
+    </div>
 
     <!-- 이전/다음 버튼 -->
     <div style="display:flex;gap:12px;align-items:center;padding-bottom:20px;">
@@ -2856,6 +2860,8 @@ function _catalogRender() {
     catlogCurrentId + '  ·  Catalogue P.' + page;
   document.getElementById('catalog-page-label').textContent =
     'P.' + page + '  [' + typeLabel + ']  (' + (catlogCurrentIdx+1) + '/' + catlogCurrentPages.length + ')';
+  const _cmImg = document.getElementById('catalog-modal-img');
+  if (_cmImg) pzReset(_cmImg);
   document.getElementById('catalog-modal-img').src = img;
 
   const prev = document.getElementById('catalog-prev');
@@ -2875,7 +2881,8 @@ function catalogChangePage(dir) {
 function closeCatalogModal(e) {
   if (e && e.target !== e.currentTarget) return;
   document.getElementById('catalog-modal').style.display = 'none';
-  document.getElementById('catalog-modal-img').src = '';
+  const _cmImg2 = document.getElementById('catalog-modal-img');
+  if (_cmImg2) { pzReset(_cmImg2); _cmImg2.src = ''; }
   document.body.style.overflow = '';
   catlogCurrentPages = []; catlogCurrentIdx = 0; catlogCurrentId = '';
 }
@@ -3231,12 +3238,15 @@ function openCatModal(cutterId) {
 
 function closeCatModal() {
   document.getElementById('cat-modal').style.display = 'none';
+  const _ci = document.getElementById('cat-modal-img'); if (_ci) pzReset(_ci);
   document.body.style.overflow = '';
 }
 
 function catShowPage() {
   const page = catCurrentPages[catCurrentIdx];
   const img = CAT_PAGES[String(page)];
+  const _catImg = document.getElementById('cat-modal-img');
+  if (_catImg) pzReset(_catImg);
   document.getElementById('cat-modal-img').src = img || '';
   const typeLabel = catCurrentIdx === 0 ? '커터규격' : catCurrentIdx === 1 ? '호환인서트' : '추가정보';
   document.getElementById('cat-page-label').textContent =
@@ -3256,6 +3266,85 @@ function catChangePage(dir) {
 document.getElementById('cat-modal').addEventListener('click', function(e) {
   if (e.target === this) closeCatModal();
 });
+
+
+// ── 핀치줌 (catalog-modal-img / cat-modal-img) ──
+(function () {
+  var pz = {
+    el: null, scale: 1, lastScale: 1,
+    startDist: 0, startX: 0, startY: 0,
+    tx: 0, ty: 0, ltx: 0, lty: 0
+  };
+
+  function dist(t) {
+    return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  }
+  function midPt(t) {
+    return { x: (t[0].clientX + t[1].clientX) / 2,
+             y: (t[0].clientY + t[1].clientY) / 2 };
+  }
+  function apply() {
+    pz.el.style.transform =
+      'scale(' + pz.scale + ') translate(' +
+      (pz.tx / pz.scale) + 'px,' + (pz.ty / pz.scale) + 'px)';
+  }
+
+  window.pzReset = function (el) {
+    if (el) el.style.transform = '';
+    pz.scale = 1; pz.lastScale = 1;
+    pz.tx = 0;   pz.ty = 0;
+    pz.ltx = 0;  pz.lty = 0;
+    pz.el = null;
+  };
+
+  function attach(imgId) {
+    var imgEl = document.getElementById(imgId);
+    if (!imgEl) return;
+    var wrapper = imgEl.parentNode;
+    var lastTap = 0;
+
+    wrapper.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        pz.el = imgEl;
+        pz.startDist = dist(e.touches);
+        var m = midPt(e.touches);
+        pz.startX = m.x; pz.startY = m.y;
+        pz.ltx = pz.tx; pz.lty = pz.ty;
+      }
+    }, { passive: false });
+
+    wrapper.addEventListener('touchmove', function (e) {
+      if (e.touches.length === 2 && pz.el === imgEl) {
+        e.preventDefault();
+        var d = dist(e.touches);
+        pz.scale = Math.max(1, Math.min(4, pz.lastScale * d / pz.startDist));
+        var m = midPt(e.touches);
+        pz.tx = pz.ltx + (m.x - pz.startX);
+        pz.ty = pz.lty + (m.y - pz.startY);
+        apply();
+      }
+    }, { passive: false });
+
+    wrapper.addEventListener('touchend', function (e) {
+      if (pz.el === imgEl && e.touches.length < 2) {
+        pz.lastScale = pz.scale;
+        if (pz.scale < 1.05) window.pzReset(imgEl);
+      }
+      var now = Date.now();
+      if (now - lastTap < 300) {
+        e.preventDefault();
+        window.pzReset(imgEl);
+      }
+      lastTap = now;
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    attach('catalog-modal-img');
+    attach('cat-modal-img');
+  });
+})();
 
 </script>
 </body>
