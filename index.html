@@ -3303,15 +3303,24 @@ document.getElementById('cat-modal').addEventListener('click', function(e) {
     var wrapper = imgEl.parentNode;
     var lastTap = 0;
     var pinching = false;
+    var panning = false;
+    var panStartX = 0, panStartY = 0;
 
     wrapper.addEventListener('touchstart', function (e) {
       if (e.touches.length === 2) {
         pinching = true;
+        panning = false;
         e.preventDefault();
         pz.el = imgEl;
         pz.startDist = dist(e.touches);
         var m = midPt(e.touches);
         pz.startX = m.x; pz.startY = m.y;
+        pz.ltx = pz.tx; pz.lty = pz.ty;
+      } else if (e.touches.length === 1 && pz.lastScale > 1) {
+        panning = true;
+        pz.el = imgEl;
+        panStartX = e.touches[0].clientX;
+        panStartY = e.touches[0].clientY;
         pz.ltx = pz.tx; pz.lty = pz.ty;
       }
     }, { passive: false });
@@ -3325,6 +3334,11 @@ document.getElementById('cat-modal').addEventListener('click', function(e) {
         pz.tx = pz.ltx + (m.x - pz.startX);
         pz.ty = pz.lty + (m.y - pz.startY);
         apply();
+      } else if (e.touches.length === 1 && panning && pz.el === imgEl) {
+        e.preventDefault();
+        pz.tx = pz.ltx + (e.touches[0].clientX - panStartX);
+        pz.ty = pz.lty + (e.touches[0].clientY - panStartY);
+        apply();
       }
     }, { passive: false });
 
@@ -3333,7 +3347,10 @@ document.getElementById('cat-modal').addEventListener('click', function(e) {
         pz.lastScale = pz.scale;
         if (pz.scale < 1.05) window.pzReset(imgEl);
       }
-      if (e.touches.length === 0) pinching = false;
+      if (e.touches.length === 0) {
+        pinching = false;
+        panning = false;
+      }
       if (!pinching) {
         var now = Date.now();
         if (now - lastTap < 300) {
