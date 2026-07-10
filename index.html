@@ -325,6 +325,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   .menu-icon{font-size:18px;}
   .main-area{flex:1;height:auto;min-height:0;}
   .content-body{padding:12px;}
+  /* 피드백 버튼: 모바일 탭바에서 숨김 */
+  #feedback-btn-wrap{display:none;}
   .calc-card{padding:12px 10px;}
   .calc-label{font-size:12px;min-width:72px;}
   .calc-input{font-size:14px;padding:8px 8px;}
@@ -411,9 +413,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   color: #fff;
 }
 
+
+
+
+/* 피드백 FAB (모바일 전용) - 기본은 숨김 */
+#feedback-fab {
+  display: none;
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: #D84000;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(212,64,0,0.35);
+  white-space: nowrap;
+}
+@media(max-width:600px){
+  #feedback-fab { display: flex; }
+}
 </style>
 </head>
 <body>
+
+<a id="feedback-fab" href="https://docs.google.com/forms/d/e/1FAIpQLSdOoS6ZZrS4IXh9b0l8-VKsqNbGdejoKSpKHVcDBN-tqnPV1A/viewform" target="_blank" rel="noopener">💬 피드백</a>
 <div class="app-wrap">
 
   <!-- 사이드바 -->
@@ -453,7 +482,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <div class="menu-sub" data-panel="calculator" data-sub="milling">밀링</div>
       <div class="menu-sub" data-panel="calculator" data-sub="roughness">조도</div>
     </div>
-      <div style="margin-top:auto;padding:12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);">
+      <div id="feedback-btn-wrap" style="margin-top:auto;padding:12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);">
         <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOoS6ZZrS4IXh9b0l8-VKsqNbGdejoKSpKHVcDBN-tqnPV1A/viewform" target="_blank" rel="noopener"
            style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;
                   background:rgba(212,64,0,0.06);color:#D84000;text-decoration:none;
