@@ -395,7 +395,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   gap: 2px;
 }
 .filter-tab {
-  padding: 7px 28px;
+  padding: 7px 18px;
   border-radius: 6px;
   border: none;
   background: transparent;
@@ -403,6 +403,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
 .filter-tab.active {
@@ -452,6 +453,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
       <div class="menu-sub" data-panel="calculator" data-sub="milling">밀링</div>
       <div class="menu-sub" data-panel="calculator" data-sub="roughness">조도</div>
     </div>
+      <div style="margin-top:auto;padding:12px 8px 0;border-top:0.5px solid var(--color-border-tertiary);">
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLSdOoS6ZZrS4IXh9b0l8-VKsqNbGdejoKSpKHVcDBN-tqnPV1A/viewform" target="_blank" rel="noopener"
+           style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;
+                  background:rgba(212,64,0,0.06);color:#D84000;text-decoration:none;
+                  font-size:13px;font-weight:500;transition:background 0.15s;"
+           onmouseover="this.style.background='rgba(212,64,0,0.12)'"
+           onmouseout="this.style.background='rgba(212,64,0,0.06)'">
+          💬 피드백 보내기
+        </a>
+      </div>
   </div>
 
   <!-- 메인 콘텐츠 -->
@@ -482,7 +493,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Noto S
     </div>
         <div class="filter-tab-bar" id="filter-tab-bar">
       <div class="filter-tab-tray">
-        <button class="filter-tab active" id="ftab-grade" onclick="setSearchTab('grade')">재종</button>
+        <button class="filter-tab active" id="ftab-all" onclick="setSearchTab('all')">통합검색</button>
+        <button class="filter-tab" id="ftab-grade" onclick="setSearchTab('grade')">재종</button>
         <button class="filter-tab" id="ftab-chip" onclick="setSearchTab('chip')">칩브레이커</button>
       </div>
     </div>
@@ -1805,12 +1817,14 @@ function renderTabCard(id,leftLabel,rightLabel,leftTabs,rightTabs,renderBlock,ac
 
 
 function setSearchTab(tab) {
-  // 탭 활성화
+  // 탭 활성화 (통합검색 / 재종 / 칩브레이커)
+  document.getElementById('ftab-all').classList.toggle('active', tab === 'all');
   document.getElementById('ftab-grade').classList.toggle('active', tab === 'grade');
   document.getElementById('ftab-chip').classList.toggle('active', tab === 'chip');
 
   // 필터 상태 업데이트
-  currentFilter = tab === 'chip' ? 'chipbreaker' : 'all';
+  // all: 재종+칩브레이커 통합 / grade: 재종만 / chip: 칩브레이커만
+  currentFilter = tab === 'chip' ? 'chipbreaker' : (tab === 'grade' ? 'grade' : 'all');
 
   // placeholder/empty-state 변경
   const input = document.getElementById('search-input');
@@ -1820,10 +1834,14 @@ function setSearchTab(tab) {
     input.placeholder = '칩브레이커 입력 (예: MF2, PR1225, PC3)';
     if (title) title.textContent = '칩브레이커를 입력하세요';
     if (desc)  desc.textContent  = '칩브레이커 코드 입력 시 ACHTECK 추천 순위를 바로 확인할 수 있습니다';
-  } else {
+  } else if (tab === 'grade') {
     input.placeholder = '경쟁사 재종 입력 (예: GC4325, TT9080)';
     if (title) title.textContent = '경쟁사 재종을 입력하세요';
     if (desc)  desc.textContent  = '재종명 입력 시 ACHTECK 추천 순위를 바로 확인할 수 있습니다';
+  } else {
+    input.placeholder = '재종 또는 칩브레이커 입력 (예: GC4325, MF2, PC3)';
+    if (title) title.textContent = '재종 또는 칩브레이커를 입력하세요';
+    if (desc)  desc.textContent  = '재종명·칩브레이커 코드 모두 검색 가능합니다';
   }
 
   // 검색어 초기화 및 재검색
